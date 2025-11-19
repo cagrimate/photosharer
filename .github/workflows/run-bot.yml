@@ -37,7 +37,7 @@ jobs:
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
           ACCESS_TOKEN_SECRET: ${{ secrets.ACCESS_TOKEN_SECRET }}
         run: |
-          python main.py once
+          python pexels_otomasyon.py once
 
       - name: paylasilan_idler.txt değiştiyse commit et
         env:
