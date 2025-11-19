@@ -1,4 +1,5 @@
-﻿import os
+import os
+import sys
 import requests
 import tweepy
 from dotenv import load_dotenv
@@ -30,7 +31,6 @@ if GEMINI_API_KEY:
     except Exception as e:
         print(f"❌ GEMINI_API_KEY bağlantı hatası: {e}")
 else:
-    # Hata düzeltildi: print(⚠️ yerine print("⚠️
     print("⚠️ GEMINI_API_KEY ortam değişkeni ayarlanmamış.")
 
 
@@ -59,7 +59,7 @@ def get_twitter_client():
         return client, api_v1
 
     except Exception as e:
-        print(f"❌ Twitter bağlantısı kurulamadı. Lütfen .env dosyanızı kontrol edin: {e}")
+        print(f"❌ Twitter bağlantısı kurulamadı. Lütfen ortam değişkenlerinizi kontrol edin: {e}")
         return None, None
 
 
@@ -186,11 +186,11 @@ def generate_ai_caption(photo_data, image_path):
 
         for attempt in range(1, 4):
             try:
-                # PROMPT GÜNCELLENDİ: Farklı açılış cümleleri istendi.
                 prompt = (
                     "Generate a single, short Twitter caption based on the image. "
-                    "The caption must start with a **highly engaging opening phrase** that acts as a scroll-stopper (e.g., 'WAIT!', 'Moment of calm:', 'Take a deep breath:', 'Can't look away from this:', 'Viral potential:'). "
-                    "Include **one thoughtful question** and **max 3 relevant hashtags**. "
+                    "The caption must start with a highly engaging opening phrase that acts as a scroll-stopper "
+                    "(e.g., 'WAIT!', 'Moment of calm:', 'Take a deep breath:', 'Can't look away from this:', 'Viral potential:'). "
+                    "Include one thoughtful question and max 3 relevant hashtags. "
                     "The entire generated text must be MAX 200 characters to leave space for the footer."
                 )
 
@@ -209,7 +209,6 @@ def generate_ai_caption(photo_data, image_path):
                 if not caption:
                     continue
 
-                # Caption için kalacak alanı hesapla
                 space_remaining = MAX_LEN - len(FOOTER)
                 if space_remaining <= 0:
                     return static_caption()
@@ -301,16 +300,21 @@ def run_bot_task():
 
 
 # ----------------------------------------------------
-# 7. ZAMANLAYICI
+# 7. ZAMANLAYICI / ÇALIŞTIRMA MODLARI
 # ----------------------------------------------------
 if __name__ == "__main__":
+    # Eğer komut satırında 'once' parametresi varsa (GitHub Actions modu):
+    #   python main.py once
+    # → Sadece bir kere çalışır ve çıkar.
+    if len(sys.argv) > 1 and sys.argv[1].lower() == "once":
+        print("\n⚙️ Tek seferlik çalışma modu (GitHub / cron vb.)\n")
+        run_bot_task()
+    else:
+        # Lokal kullanım: PC'de sürekli çalışan bot
+        run_bot_task()
+        schedule.every(90).minutes.do(run_bot_task)
+        print("\n🟢 BOT AKTİF — Otomatik paylaşıma hazır. (1.5 saat aralıklarla)\n")
 
-    run_bot_task()
-
-    #schedule.every(1).hours.do(run_bot_task)
-    schedule.every(90).minutes.do(run_bot_task)
-    print("\n🟢 BOT AKTİF — Otomatik paylaşıma hazır. (1.5 saat aralıklarla)\n")
-
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
