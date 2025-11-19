@@ -189,7 +189,7 @@ def generate_ai_caption(photo_data, image_path):
                 prompt = (
                     "Generate a single, short Twitter caption based on the image. "
                     "The caption must start with a highly engaging opening phrase that acts as a scroll-stopper "
-                    "(e.g., 'WAIT!', 'Moment of calm:', 'Take a deep breath:', 'Can't look away from this:', 'Viral potential:'). "
+                    "(e.g., 'WAIT!', 'Moment of calm:', 'Take a deep breath:', 'Can't look away from this:', 'Viral potential:', etc. you can find better words.). "
                     "Include one thoughtful question and max 3 relevant hashtags. "
                     "The entire generated text must be MAX 200 characters to leave space for the footer."
                 )
@@ -318,3 +318,4 @@ if __name__ == "__main__":
         while True:
             schedule.run_pending()
             time.sleep(1)
+
