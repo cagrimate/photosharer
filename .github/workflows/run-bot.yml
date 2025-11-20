@@ -2,14 +2,24 @@ name: Twitter Botu Çalıştır
 
 on:
   schedule:
-    # 90 dakika aralıklarla çalıştır.
-    - cron: "0 0,3,6,9,12,15,18,21 * * *"
-    - cron: "30 1,4,7,10,13,16,19,22 * * *"
+    # 90 dakika aralıklarla çalıştır (UTC). Saat başından 5 dk sonra başlat.
+    # 00:05, 03:05, 06:05, 09:05, 12:05, 15:05, 18:05, 21:05 (UTC)
+    - cron: "5 0,3,6,9,12,15,18,21 * * *"
+    # 01:35, 04:35, 07:35, 10:35, 13:35, 16:35, 19:35, 22:35 (UTC)
+    - cron: "35 1,4,7,10,13,16,19,22 * * *"
   workflow_dispatch:
+
+# GITHUB_TOKEN ile push atabilmek için içerik izni
+permissions:
+  contents: write
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
+    # Aynı anda iki run çakışmasın diye
+    concurrency:
+      group: twitter-bot
+      cancel-in-progress: false
 
     steps:
       - name: Kodu çek
