@@ -166,7 +166,7 @@ def generate_ai_caption(photo_data, image_path):
         return (
             f"STOP SCROLLING. Here is your moment of visual escape.\n"
             f"📌 Long press for 4K.\n"
-            f"Photo by {photo_data['photographer']} #Inspiration"
+            f"Photo by {photo_data['photographer']} "
         )[:250]
 
     if not GEMINI_CLIENT or not image_path or not os.path.exists(image_path):
@@ -190,7 +190,6 @@ def generate_ai_caption(photo_data, image_path):
                     "Generate a single, short Twitter caption based on the image. "
                     "The caption must start with a highly engaging opening phrase that acts as a scroll-stopper "
                     "(e.g., 'WAIT!', 'Moment of calm:', 'Take a deep breath:', 'Can't look away from this:', 'Viral potential:', etc. you can find better words.). "
-                    "Include one thoughtful question and max 3 relevant hashtags. " #değiştirilecek.
                     "The entire generated text must be MAX 1000 characters to leave space for the footer."
                     "Based on this image, write a very short, imaginative micro-story about what might be happening in the scene. Use a warm, cinematic tone."
                     "Do NOT repeat the caption or footer text. "
@@ -320,5 +319,6 @@ if __name__ == "__main__":
         while True:
             schedule.run_pending()
             time.sleep(1)
+
 
 
