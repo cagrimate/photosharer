@@ -174,7 +174,7 @@ def generate_ai_caption(photo_data, image_path):
 
     MODELS = ["gemini-2.5-flash", "gemini-2.5-pro"]
     FOOTER = f"\n\n📌 Save this.\n 📸 Long press for 4K.\n 📸 {photo_data['photographer']} #Inspiration"
-    MAX_LEN = 250
+    MAX_LEN = 1000
 
     try:
         img_bytes = open(image_path, "rb").read()
@@ -190,8 +190,10 @@ def generate_ai_caption(photo_data, image_path):
                     "Generate a single, short Twitter caption based on the image. "
                     "The caption must start with a highly engaging opening phrase that acts as a scroll-stopper "
                     "(e.g., 'WAIT!', 'Moment of calm:', 'Take a deep breath:', 'Can't look away from this:', 'Viral potential:', etc. you can find better words.). "
-                    "Include one thoughtful question and max 3 relevant hashtags. "
-                    "The entire generated text must be MAX 200 characters to leave space for the footer."
+                    "Include one thoughtful question and max 3 relevant hashtags. " #değiştirilecek.
+                    "The entire generated text must be MAX 1000 characters to leave space for the footer."
+                    "Based on this image, write a very short, imaginative micro-story about what might be happening in the scene. Use a warm, cinematic tone."
+                    "Do NOT repeat the caption or footer text. "
                 )
 
                 response = GEMINI_CLIENT.models.generate_content(
@@ -318,4 +320,5 @@ if __name__ == "__main__":
         while True:
             schedule.run_pending()
             time.sleep(1)
+
 
