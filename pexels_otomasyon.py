@@ -152,13 +152,13 @@ def download_image(url, filename):
 
 
 # ----------------------------------------------------
-# 5. GEMINI CAPTION ÜRETİCİ
+# 5. GEMINI CAPTION ÜRETİCİ (DÜZENLENDİ)
 # ----------------------------------------------------
 def generate_ai_caption(photo_data, image_path):
     """
-    Fotoğrafı Gemini'ye gönderip, X için kısa bir caption üretir.
-    - Modeller: gemini-2.5-flash ve gemini-2.5-pro (sırayla)
-    - Tüm tweet (caption + footer) max 250 karakter
+    Fotoğrafı Gemini'ye gönderip, X için kısa bir hikaye/caption üretir.
+    - Başlıklar (Twitter Caption, Micro-story) kaldırıldı.
+    - Hashtagler kaldırıldı.
     """
 
     def static_caption():
@@ -174,7 +174,9 @@ def generate_ai_caption(photo_data, image_path):
 
     MODELS = ["gemini-2.5-flash", "gemini-2.5-pro"]
     FOOTER = f"\n\n📌 Save this.\n 📸 Long press for 4K.\n 📸 {photo_data['photographer']} #Inspiration"
-    MAX_LEN = 1000
+    
+    # NOT: Twitter Blue yoksa limiti 280 yapmalısınız. Varsa 1000 kalabilir.
+    MAX_LEN = 1000 
 
     try:
         img_bytes = open(image_path, "rb").read()
@@ -186,13 +188,15 @@ def generate_ai_caption(photo_data, image_path):
 
         for attempt in range(1, 4):
             try:
+                # --- GÜNCELLENEN PROMPT ---
                 prompt = (
-                    "Generate a single, short Twitter caption based on the image. "
-                    "The caption must start with a highly engaging opening phrase that acts as a scroll-stopper "
-                    "(e.g., 'WAIT!', 'Moment of calm:', 'Take a deep breath:', 'Can't look away from this:', 'Viral potential:', etc. you can find better words.). "
-                    "The entire generated text must be MAX 1000 characters to leave space for the footer."
-                    "Based on this image, write a very short, imaginative micro-story about what might be happening in the scene. Use a warm, cinematic tone."
-                    "Do NOT repeat the caption or footer text. "
+                    "Write a single, cohesive, and cinematic narrative paragraph based on this image. "
+                    "1. Start with a short, engaging hook (e.g., 'Moment of calm', 'Look closer') but do not use bold text for it. "
+                    "2. Continue directly into a short, imaginative description or micro-story about the scene. "
+                    "3. Do NOT use headers like 'Twitter Caption:' or 'Micro-story:'. "
+                    "4. Do NOT include any hashtags in your text. "
+                    "5. The tone should be warm and atmospheric. "
+                    "6. Keep it fluid and human-like."
                 )
 
                 response = GEMINI_CLIENT.models.generate_content(
@@ -209,6 +213,12 @@ def generate_ai_caption(photo_data, image_path):
                 caption = (response.text or "").strip()
                 if not caption:
                     continue
+
+                # --- TEMİZLİK (Garanti olsun diye) ---
+                # Eğer model inatla başlık koyarsa diye manuel temizlik:
+                caption = caption.replace("**Twitter Caption:**", "").replace("Twitter Caption:", "")
+                caption = caption.replace("**Micro-story:**", "").replace("Micro-story:", "")
+                caption = caption.strip()
 
                 space_remaining = MAX_LEN - len(FOOTER)
                 if space_remaining <= 0:
@@ -319,6 +329,3 @@ if __name__ == "__main__":
         while True:
             schedule.run_pending()
             time.sleep(1)
-
-
-
