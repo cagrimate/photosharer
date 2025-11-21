@@ -2,21 +2,24 @@ name: Twitter Botu Çalıştır
 
 on:
   schedule:
-    # 90 dakika aralıklarla çalıştır (UTC). Saat başından 5 dk sonra başlat.
-    # 00:05, 03:05, 06:05, 09:05, 12:05, 15:05, 18:05, 21:05 (UTC)
-    - cron: "5 0,3,6,9,12,15,18,21 * * *"
-    # 01:35, 04:35, 07:35, 10:35, 13:35, 16:35, 19:35, 22:35 (UTC)
-    - cron: "35 1,4,7,10,13,16,19,22 * * *"
-  workflow_dispatch:
+    # --- İNSAN GİBİ ZAMANLAMA STRATEJİSİ ---
+    # GitHub Actions UTC (Coordinated Universal Time) kullanır.
+    # Türkiye (TRT) = UTC + 3 saattir.
+    # Hedef: TR saatiyle sabah 08:00 ile gece 00:00 arası çalışsın (Uyku vakti: 00:00 - 08:00).
+    # UTC Karşılığı: Sabah 05:00 ile Akşam 21:00 arası.
+    
+    # "5-21/1" -> 05:00'dan 21:00'a kadar her saat başı çalışır. (Toplam ~17 tetikleme)
+    # Dakikayı '13' gibi rastgele bir sayı seçtim ki tam saat başında olmasın.
+    - cron: "13 7-23 * * *"
+    
+  workflow_dispatch: # Manuel tetikleme için
 
-# GITHUB_TOKEN ile push atabilmek için içerik izni
 permissions:
   contents: write
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
-    # Aynı anda iki run çakışmasın diye
     concurrency:
       group: twitter-bot
       cancel-in-progress: false
@@ -25,8 +28,8 @@ jobs:
       - name: Kodu çek
         uses: actions/checkout@v4
         with:
-          persist-credentials: true   # push için önemli
-          fetch-depth: 0              # tam history (bazı durumlar için iyi)
+          persist-credentials: true
+          fetch-depth: 0
 
       - name: Python kur
         uses: actions/setup-python@v5
@@ -38,7 +41,20 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests tweepy python-dotenv google-genai schedule
 
-      - name: Botu tek sefer çalıştır
+      # --- KRİTİK EKLEME: RASTGELE GECİKME (JITTER) ---
+      # Botun tam 13 geçe çalışmasını engeller.
+      # 1 saniye ile 1800 saniye (30 dakika) arasında rastgele bekler.
+      # Böylece bir tweet 14:15'te atılırken diğeri 15:40'ta atılabilir.
+      - name: 🎲 İnsan Taklidi - Rastgele Bekleme Süresi
+        shell: bash
+        run: |
+          echo "🤖 Bot tetiklendi ama insan gibi görünmek için rastgele bekliyor..."
+          # 0 ile 1800 saniye (30 dk) arasında rastgele sayı üret
+          DELAY=$((RANDOM % 1800)) 
+          echo "⏳ $DELAY saniye (yaklaşık $((DELAY / 60)) dakika) beklenecek."
+          sleep $DELAY
+
+      - name: Botu Çalıştır ve Paylaş
         env:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -47,6 +63,8 @@ jobs:
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
           ACCESS_TOKEN_SECRET: ${{ secrets.ACCESS_TOKEN_SECRET }}
         run: |
+          # 'once' argümanı, Python kodunun içindeki schedule döngüsünü kırıp
+          # tek sefer çalışıp kapanmasını sağlamalıdır.
           python pexels_otomasyon.py once
 
       - name: paylasilan_idler.txt değiştiyse commit et
@@ -55,8 +73,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # paylasilan_idler.txt değişmiş mi kontrol et
+          
           if ! git diff --quiet -- paylasilan_idler.txt; then
             echo "🔄 ID dosyası güncellenmiş, commit ediliyor..."
             git add paylasilan_idler.txt
