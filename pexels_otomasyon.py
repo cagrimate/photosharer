@@ -190,14 +190,21 @@ def generate_ai_caption(photo_data, image_path):
             try:
                 # --- GÜNCELLENEN PROMPT ---
                 prompt = (
-                    "Write a single, cohesive, and cinematic narrative paragraph based on this image. "
-                    "1. Start with a short, engaging hook (e.g., 'Moment of calm', 'Look closer') but do not use bold text for it. "
-                    "2. Continue directly into a short, imaginative description or micro-story about the scene. "
-                    "3. Do NOT use headers like 'Twitter Caption:' or 'Micro-story:'. "
-                    "4. Do NOT include any hashtags in your text. "
-                    "5. The tone should be warm and atmospheric. "
-                    "6. Keep it fluid and human-like."
-                )
+    "Based on the provided image, generate a single cohesive caption containing THREE clearly separated parts, "
+    "but WITHOUT using any headers, labels, numbering, emojis, titles, or section names. "
+    "The three required parts must appear in this exact order:\n\n"
+    
+    "1) A short, sharp, attention-grabbing hook (1 sentence). It should be cinematic, emotional, or intriguing.\n"
+    "2) A brief atmospheric description of the scene in the image (2–3 sentences). Keep it visual, warm, and human.\n"
+    "3) A short micro-story inspired by the image (2–3 sentences). It should feel imaginative and narrative.\n\n"
+
+    "Rules:\n"
+    "- Do NOT add labels like 'Hook:', 'Description:', or 'Story:'. Just write each part as a continuous paragraph.\n"
+    "- Do NOT use hashtags.\n"
+    "- Do NOT break the structure.\n"
+    "- Keep the tone cinematic, smooth, and natural.\n"
+    "- Output must be a single caption containing all three parts.\n"
+)
 
                 response = GEMINI_CLIENT.models.generate_content(
                     model=model,
@@ -329,3 +336,4 @@ if __name__ == "__main__":
         while True:
             schedule.run_pending()
             time.sleep(1)
+
