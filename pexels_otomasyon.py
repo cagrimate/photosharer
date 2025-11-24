@@ -204,6 +204,8 @@ def generate_ai_caption(photo_data, image_path):
     "- Do NOT break the structure.\n"
     "- Keep the tone cinematic, smooth, and natural.\n"
     "- Output must be a single caption containing all three parts.\n"
+    "-The three hashtags should be relevant to the image and potentially engaging for Twitter."
+    "-Add 3 ai hashtags " 
 )
 
                 response = GEMINI_CLIENT.models.generate_content(
