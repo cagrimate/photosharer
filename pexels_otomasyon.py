@@ -200,7 +200,7 @@ def generate_ai_caption(photo_data, image_path):
 
     "Rules:\n"
     "- Do NOT add labels like 'Hook:', 'Description:', or 'Story:'. Just write each part as a continuous paragraph.\n"
-    "- Do NOT use hashtags.\n"
+    #"- Do NOT use hashtags.\n"
     "- Do NOT break the structure.\n"
     "- Keep the tone cinematic, smooth, and natural.\n"
     "- Output must be a single caption containing all three parts.\n"
@@ -338,4 +338,5 @@ if __name__ == "__main__":
         while True:
             schedule.run_pending()
             time.sleep(1)
+
 
