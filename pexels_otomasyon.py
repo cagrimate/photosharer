@@ -99,7 +99,7 @@ def fetch_unique_photo_data(shared_ids):
 
     attempts = 0
 
-    while attempts < 10:
+    while attempts < 50:
         attempts += 1
         headers = {"Authorization": PEXELS_API_KEY}
         url = f"https://api.pexels.com/v1/curated?per_page=1&page={random.randint(1, 100)}"
@@ -338,6 +338,7 @@ if __name__ == "__main__":
         while True:
             schedule.run_pending()
             time.sleep(1)
+
 
 
 
