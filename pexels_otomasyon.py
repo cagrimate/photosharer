@@ -111,7 +111,19 @@ def fetch_unique_photo_data(shared_ids):
         "film noir",            # Siyah beyaz/gizemli
         "night city",           # Gece şehri
         "surreal",              # Gerçeküstü
-        "vintage style"         # Eski tarz
+        "vintage style",         # Eski tarz
+        "library aesthetic",
+        "coffee shop", 
+        "abandoned places", 
+        "subway",
+        "rainy day", 
+        "mountain fog, 
+        "ocean storm", 
+        "desert sunset",
+        "double exposure", 
+        "light painting", 
+        "texture", 
+        "shadows"
     ]
 
     attempts = 0
@@ -367,6 +379,7 @@ if __name__ == "__main__":
         while True:
             schedule.run_pending()
             time.sleep(1)
+
 
 
 
