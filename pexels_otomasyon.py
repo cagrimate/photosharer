@@ -117,7 +117,7 @@ def fetch_unique_photo_data(shared_ids):
         "abandoned places", 
         "subway",
         "rainy day", 
-        "mountain fog, 
+        "mountain fog", 
         "ocean storm", 
         "desert sunset",
         "double exposure", 
@@ -379,6 +379,7 @@ if __name__ == "__main__":
         while True:
             schedule.run_pending()
             time.sleep(1)
+
 
 
 
