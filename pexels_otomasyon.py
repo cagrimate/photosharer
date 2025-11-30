@@ -90,34 +90,62 @@ def add_id_to_tracker(photo_id):
 # 4. PEXELS API
 # ----------------------------------------------------
 def fetch_unique_photo_data(shared_ids):
-    """Pexels'ten daha önce paylaşılmamış rastgele bir fotoğraf çeker."""
+    """Pexels'ten rastgele bir kategori seçip benzersiz fotoğraf çeker."""
     print("📷 Yeni fotoğraf aranıyor...")
 
     if not PEXELS_API_KEY:
         print("❌ PEXELS_API_KEY ayarlanmamış.")
         return None
+    
+    # --- BURAYA İSTEDİĞİN KATEGORİLERİ EKLE ---
+    # Botunun tarzına uygun, hikaye yazılabilecek kelimeler:
+    categories = [
+        "cinematic",            # Sinematik
+        "street photography",   # Sokak fotoğrafçılığı
+        "dark moody",           # Karanlık ve melankolik
+        "abstract art",         # Soyut sanat
+        "minimalist",           # Minimalist
+        "cyberpunk",            # Neon/Cyberpunk
+        "foggy forest",         # Sisli orman
+        "urban aesthetic",      # Şehir estetiği
+        "film noir",            # Siyah beyaz/gizemli
+        "night city",           # Gece şehri
+        "surreal",              # Gerçeküstü
+        "vintage style"         # Eski tarz
+    ]
 
     attempts = 0
+    max_attempts = 50 
 
-    while attempts < 50:
+    while attempts < max_attempts:
         attempts += 1
+        
+        # 1. Rastgele bir kategori seç
+        selected_category = random.choice(categories)
+        
+        # 2. O kategoriden rastgele bir sayfa seç (Arama sonuçları daha az olacağı için limiti 100-200 civarı tutmak güvenli)
+        page_num = random.randint(1, 150)
+        
+        # 3. URL'i 'search' endpoint'ine çeviriyoruz
         headers = {"Authorization": PEXELS_API_KEY}
-        url = f"https://api.pexels.com/v1/curated?per_page=1&page={random.randint(1, 100)}"
+        url = f"https://api.pexels.com/v1/search?query={selected_category}&per_page=1&page={page_num}"
 
         try:
+            print(f"🔎 Aranan Kategori: '{selected_category}' | Sayfa: {page_num}")
             res = requests.get(url, headers=headers, timeout=15)
             res.raise_for_status()
             data = res.json()
         except requests.exceptions.RequestException as e:
-            print(f"❌ Pexels API hatası, {attempts}. deneme → Bekleme: 10sn | {e}")
-            time.sleep(10)
+            print(f"❌ Pexels API hatası ({selected_category}), {attempts}. deneme → Bekleme: 5sn | {e}")
+            time.sleep(5)
             continue
 
         if data.get("photos"):
             photo = data["photos"][0]
             photo_id_str = str(photo["id"])
+            
             if photo_id_str not in shared_ids:
-                print(f"✔️ Benzersiz fotoğraf bulundu: {photo_id_str}")
+                print(f"✔️ Benzersiz fotoğraf bulundu: {photo_id_str} (Tema: {selected_category})")
                 return {
                     "id": photo_id_str,
                     "url_tiny": photo["src"]["tiny"],
@@ -125,13 +153,14 @@ def fetch_unique_photo_data(shared_ids):
                     "photographer": photo["photographer"],
                 }
             else:
-                print(f"↻ Tekrar eden ID ({photo_id_str}) → yeni arama...")
+                print(f"↻ Tekrar eden ID ({photo_id_str}) → {attempts}/{max_attempts} yeni kategori deneniyor...")
         else:
-            print("⚠️ Pexels'ten fotoğraf gelmedi.")
+            # O sayfada fotoğraf yoksa (arama sonucu bitmişse)
+            print(f"⚠️ '{selected_category}' için {page_num}. sayfada fotoğraf yok.")
 
-        time.sleep(3)
+        time.sleep(2)
 
-    print("❌ 10 denemede benzersiz fotoğraf bulunamadı.")
+    print(f"❌ {max_attempts} denemede benzersiz fotoğraf bulunamadı.")
     return None
 
 
@@ -338,6 +367,7 @@ if __name__ == "__main__":
         while True:
             schedule.run_pending()
             time.sleep(1)
+
 
 
 
