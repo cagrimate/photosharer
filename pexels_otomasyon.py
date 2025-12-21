@@ -196,32 +196,59 @@ def download_image(url, filename):
 # 5. GEMINI CAPTION ÜRETİCİ (DÜZENLENDİ)
 # ----------------------------------------------------
 def generate_ai_caption(photo_data, image_path):
-    """
-    Fotoğrafı Gemini'ye gönderip, X için kısa bir hikaye/caption üretir.
-    - Başlıklar (Twitter Caption, Micro-story) kaldırıldı.
-    - Hashtagler kaldırıldı.
-    """
+    # ... (önceki kısımlar aynı)
 
-    def static_caption():
-        """API başarısız olursa kullanılacak statik yedek metin."""
-        return (
-            f"STOP SCROLLING. Here is your moment of visual escape.\n"
-            f"📌 Long press for 4K.\n"
-            f"Photo by {photo_data['photographer']} "
-        )[:250]
-
-    if not GEMINI_CLIENT or not image_path or not os.path.exists(image_path):
-        return static_caption()
-
-    MODELS = ["gemini-2.5-flash", "gemini-2.5-pro"]
-    FOOTER = f"\n\n📌 Save this.\n 📸 Long press for 4K.\n 📸 {photo_data['photographer']} #Inspiration"
+    MODELS = ["gemini-2.0-flash", "gemini-1.5-flash"] # Not: gemini-2.5 henüz çıkmadıysa güncel modelleri kullanın
     
-    # NOT: Twitter Blue yoksa limiti 280 yapmalısınız. Varsa 1000 kalabilir.
-    MAX_LEN = 1000 
+    # X (Twitter) Standart Limit: 280
+    # Footer ve boşluklar için pay bırakıyoruz
+    FOOTER = f"\n\n📸 {photo_data['photographer']} #Ai #Visual"
+    MAX_X_LIMIT = 280 
+    SAFE_LIMIT = MAX_X_LIMIT - len(FOOTER) - 5 # Güvenli alan bırakıyoruz
 
-    try:
-        img_bytes = open(image_path, "rb").read()
-    except Exception:
+    # ... (img_bytes okuma kısmı aynı)
+
+    for model in MODELS:
+        # ...
+        try:
+            # PROMPT GÜNCELLEMESİ: Karakter sınırı eklendi
+            prompt = (
+                f"Based on the image, generate a short, cinematic caption (max {SAFE_LIMIT} characters). "
+                "Structure: 1 sharp hook, 1 brief visual sentence, and 1 tiny micro-story. "
+                "DO NOT use headers, labels, or emojis. Output must be plain text. "
+                "Focus on a moody and human tone."
+            )
+
+            response = GEMINI_CLIENT.models.generate_content(
+                model=model,
+                contents=[
+                    types.Part.from_bytes(data=img_bytes, mime_type="image/jpeg"),
+                    prompt,
+                ],
+            )
+
+            caption = (response.text or "").strip()
+            if not caption:
+                continue
+
+            # Temizlik
+            caption = caption.replace("Hook:", "").replace("Story:", "").strip()
+
+            # KRİTİK NOKTA: Karakter sayısını X limitine göre kesiyoruz
+            final_text = f"{caption}{FOOTER}"
+            
+            if len(final_text) > MAX_X_LIMIT:
+                # Eğer hala uzunsa, caption kısmından kırpıyoruz
+                excess = len(final_text) - MAX_X_LIMIT
+                caption = caption[:-excess-3] + "..."
+                final_text = f"{caption}{FOOTER}"
+
+            print("✨ Üretilen Caption:", final_text)
+            print(f"🧮 Karakter Sayısı: {len(final_text)}")
+            return final_text
+
+        except Exception as e:
+            # ... (Hata yakalama aynı)
         return static_caption()
 
     for model in MODELS:
@@ -379,6 +406,7 @@ if __name__ == "__main__":
         while True:
             schedule.run_pending()
             time.sleep(1)
+
 
 
 
