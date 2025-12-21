@@ -22,7 +22,6 @@ ID_TRACKER_FILE = "paylasilan_idler.txt"
 TEMP_GEMINI_IMAGE = "temp_tiny_photo.jpg"
 TEMP_TWITTER_IMAGE = "temp_original_photo.jpg"
 
-# Global Gemini Client başlatma
 GEMINI_CLIENT = None
 if GEMINI_API_KEY:
     try:
@@ -30,44 +29,31 @@ if GEMINI_API_KEY:
         print("Gemini API bağlantısı başarılı.")
     except Exception as e:
         print(f"❌ GEMINI_API_KEY bağlantı hatası: {e}")
-else:
-    print("⚠️ GEMINI_API_KEY ortam değişkeni ayarlanmamış.")
-
 
 # ----------------------------------------------------
 # 2. TWITTER BAĞLANTISI
 # ----------------------------------------------------
 def get_twitter_client():
-    """Twitter API v2 Client (Tweet) ve v1 API (Medya) nesnelerini döndürür."""
     try:
-        # v2 Client (Tweet atma)
         client = tweepy.Client(
             consumer_key=os.getenv("CONSUMER_KEY"),
             consumer_secret=os.getenv("CONSUMER_SECRET"),
             access_token=os.getenv("ACCESS_TOKEN"),
             access_token_secret=os.getenv("ACCESS_TOKEN_SECRET")
         )
-
-        # v1 API (Medya yükleme)
         auth = tweepy.OAuthHandler(os.getenv("CONSUMER_KEY"), os.getenv("CONSUMER_SECRET"))
         auth.set_access_token(os.getenv("ACCESS_TOKEN"), os.getenv("ACCESS_TOKEN_SECRET"))
         api_v1 = tweepy.API(auth)
-
-        # Basit bağlantı testi
         client.get_me()
-
         return client, api_v1
-
     except Exception as e:
-        print(f"❌ Twitter bağlantısı kurulamadı. Lütfen ortam değişkenlerinizi kontrol edin: {e}")
+        print(f"❌ Twitter bağlantı hatası: {e}")
         return None, None
-
 
 # ----------------------------------------------------
 # 3. LOJİK VE DOSYA TAKİBİ
 # ----------------------------------------------------
 def get_shared_ids():
-    """Daha önce paylaşılan fotoğraf ID'lerini okur."""
     if not os.path.exists(ID_TRACKER_FILE):
         return set()
     try:
@@ -76,135 +62,75 @@ def get_shared_ids():
     except Exception:
         return set()
 
-
 def add_id_to_tracker(photo_id):
-    """Yeni paylaşılan fotoğraf ID'sini dosyaya ekler."""
     try:
         with open(ID_TRACKER_FILE, "a", encoding="utf-8") as f:
             f.write(f"{photo_id}\n")
     except Exception as e:
         print(f"ID dosyasına yazma hatası: {e}")
 
-
 # ----------------------------------------------------
 # 4. PEXELS API
 # ----------------------------------------------------
 def fetch_unique_photo_data(shared_ids):
-    """Pexels'ten rastgele bir kategori seçip benzersiz fotoğraf çeker."""
     print("📷 Yeni fotoğraf aranıyor...")
-
     if not PEXELS_API_KEY:
-        print("❌ PEXELS_API_KEY ayarlanmamış.")
         return None
     
-    # --- BURAYA İSTEDİĞİN KATEGORİLERİ EKLE ---
-    # Botunun tarzına uygun, hikaye yazılabilecek kelimeler:
     categories = [
-        "cinematic",            # Sinematik
-        "street photography",   # Sokak fotoğrafçılığı
-        "dark moody",           # Karanlık ve melankolik
-        "abstract art",         # Soyut sanat
-        "minimalist",           # Minimalist
-        "cyberpunk",            # Neon/Cyberpunk
-        "foggy forest",         # Sisli orman
-        "urban aesthetic",      # Şehir estetiği
-        "film noir",            # Siyah beyaz/gizemli
-        "night city",           # Gece şehri
-        "surreal",              # Gerçeküstü
-        "vintage style",         # Eski tarz
-        "library aesthetic",
-        "coffee shop", 
-        "abandoned places", 
-        "subway",
-        "rainy day", 
-        "mountain fog", 
-        "ocean storm", 
-        "desert sunset",
-        "double exposure", 
-        "light painting", 
-        "texture", 
-        "shadows"
+        "cinematic", "street photography", "dark moody", "abstract art", 
+        "minimalist", "cyberpunk", "foggy forest", "urban aesthetic", 
+        "film noir", "night city", "surreal", "vintage style"
     ]
 
     attempts = 0
-    max_attempts = 50 
+    max_attempts = 30 
 
     while attempts < max_attempts:
         attempts += 1
-        
-        # 1. Rastgele bir kategori seç
         selected_category = random.choice(categories)
-        
-        # 2. O kategoriden rastgele bir sayfa seç (Arama sonuçları daha az olacağı için limiti 100-200 civarı tutmak güvenli)
-        page_num = random.randint(1, 150)
-        
-        # 3. URL'i 'search' endpoint'ine çeviriyoruz
+        page_num = random.randint(1, 100)
         headers = {"Authorization": PEXELS_API_KEY}
         url = f"https://api.pexels.com/v1/search?query={selected_category}&per_page=1&page={page_num}"
 
         try:
-            print(f"🔎 Aranan Kategori: '{selected_category}' | Sayfa: {page_num}")
             res = requests.get(url, headers=headers, timeout=15)
             res.raise_for_status()
             data = res.json()
-        except requests.exceptions.RequestException as e:
-            print(f"❌ Pexels API hatası ({selected_category}), {attempts}. deneme → Bekleme: 5sn | {e}")
-            time.sleep(5)
+            if data.get("photos"):
+                photo = data["photos"][0]
+                photo_id_str = str(photo["id"])
+                if photo_id_str not in shared_ids:
+                    return {
+                        "id": photo_id_str,
+                        "url_tiny": photo["src"]["tiny"],
+                        "url_original": photo["src"]["original"],
+                        "photographer": photo["photographer"],
+                    }
+            time.sleep(1)
+        except Exception as e:
+            print(f"Pexels hatası: {e}")
             continue
-
-        if data.get("photos"):
-            photo = data["photos"][0]
-            photo_id_str = str(photo["id"])
-            
-            if photo_id_str not in shared_ids:
-                print(f"✔️ Benzersiz fotoğraf bulundu: {photo_id_str} (Tema: {selected_category})")
-                return {
-                    "id": photo_id_str,
-                    "url_tiny": photo["src"]["tiny"],
-                    "url_original": photo["src"]["original"],
-                    "photographer": photo["photographer"],
-                }
-            else:
-                print(f"↻ Tekrar eden ID ({photo_id_str}) → {attempts}/{max_attempts} yeni kategori deneniyor...")
-        else:
-            # O sayfada fotoğraf yoksa (arama sonucu bitmişse)
-            print(f"⚠️ '{selected_category}' için {page_num}. sayfada fotoğraf yok.")
-
-        time.sleep(2)
-
-    print(f"❌ {max_attempts} denemede benzersiz fotoğraf bulunamadı.")
     return None
 
-
 def download_image(url, filename):
-    """Belirtilen URL'den dosyayı indirir."""
     try:
         res = requests.get(url, stream=True, timeout=30)
         res.raise_for_status()
-
         with open(filename, "wb") as f:
             for chunk in res.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
+                f.write(chunk)
         return filename
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Resim indirme hatası ({filename}): {e}")
+    except Exception as e:
+        print(f"İndirme hatası: {e}")
         return None
-
 
 # ----------------------------------------------------
 # 5. GEMINI CAPTION ÜRETİCİ (DÜZENLENDİ)
 # ----------------------------------------------------
 def generate_ai_caption(photo_data, image_path):
-    """
-    Fotoğrafı Gemini'ye gönderip, X (Twitter) karakter limitine (280) 
-    uygun, başlıksız ve temiz bir metin üretir.
-    """
-    
-    # 1. Sabitler ve Limitler
     MAX_X_LIMIT = 280
     FOOTER = f"\n\n📸 {photo_data['photographer']} #Ai #Visual"
-    # Gemini'ye bırakılan güvenli alan (Footer uzunluğunu düşüyoruz)
     SAFE_LIMIT = MAX_X_LIMIT - len(FOOTER) - 10 
 
     def static_caption():
@@ -213,11 +139,13 @@ def generate_ai_caption(photo_data, image_path):
     if not GEMINI_CLIENT or not image_path or not os.path.exists(image_path):
         return static_caption()
 
-    # Güncel Model İsimleri (2.5 yerine en hızlı ve güncel olanlar)
-      MODELS = ["gemini-2.5-flash", "gemini-2.5-pro"] 
+    # Model isimlerini isteğin üzerine değiştirmedim
+    MODELS = ["gemini-2.5-flash", "gemini-2.5-pro"] 
 
     try:
-        img_bytes = open(image_path, "rb").read()
+        # Dosyayı güvenli açma (with bloğu)
+        with open(image_path, "rb") as f:
+            img_bytes = f.read()
     except Exception:
         return static_caption()
 
@@ -225,11 +153,10 @@ def generate_ai_caption(photo_data, image_path):
         print(f"🤖 Gemini modeli deneniyor: {model}")
         for attempt in range(1, 3):
             try:
-                # TEK VE NET PROMPT
                 prompt = (
                     f"Write a cinematic tweet about this image in max {SAFE_LIMIT} characters. "
                     "Structure: One sharp hook, one visual description, one tiny story. "
-                    "Rules: NO labels (like Hook:), NO emojis, NO headers. Plain text only."
+                    "Rules: NO labels (like Hook:), NO emojis, NO headers, NO hashtags. Plain text only."
                 )
 
                 response = GEMINI_CLIENT.models.generate_content(
@@ -244,22 +171,19 @@ def generate_ai_caption(photo_data, image_path):
                 if not caption:
                     continue
 
-                # Model inatla etiket koyarsa temizle
-                for tag in ["Hook:", "Description:", "Story:", "Caption:", "**"]:
+                # Model başlık eklerse temizle
+                for tag in ["Hook:", "Description:", "Story:", "Caption:", "**", "Twitter Caption:"]:
                     caption = caption.replace(tag, "")
                 
                 caption = caption.strip()
 
-                # Karakter Kontrolü ve Birleştirme
-                final_text = f"{caption}{FOOTER}"
-                
-                if len(final_text) > MAX_X_LIMIT:
-                    # Hala uzunsa metni güvenli yerden kesip ... ekle
+                # Karakter Kontrolü ve Sert Kesme
+                if len(caption) + len(FOOTER) > MAX_X_LIMIT:
                     allowed_caption_len = MAX_X_LIMIT - len(FOOTER) - 3
                     caption = caption[:allowed_caption_len] + "..."
-                    final_text = f"{caption}{FOOTER}"
 
-                print(f"✨ Tweet Hazır ({len(final_text)} kr): {final_text}")
+                final_text = f"{caption}{FOOTER}"
+                print(f"✨ Tweet Hazır ({len(final_text)} karakter)")
                 return final_text
 
             except Exception as e:
@@ -269,167 +193,60 @@ def generate_ai_caption(photo_data, image_path):
 
     return static_caption()
 
-    for model in MODELS:
-        print(f"🤖 Gemini modeli deneniyor: {model}")
-
-        for attempt in range(1, 4):
-            try:
-                # --- GÜNCELLENEN PROMPT ---
-                prompt = (
-    "Based on the provided image, generate a single cohesive caption containing THREE clearly separated parts, "
-    "but WITHOUT using any headers, labels, numbering, emojis, titles, or section names. "
-    "The three required parts must appear in this exact order:\n\n"
-    
-    "1) A short, sharp, attention-grabbing hook (1 sentence). It should be cinematic, emotional, or intriguing.\n"
-    "2) A brief atmospheric description of the scene in the image (2–3 sentences). Keep it visual, warm, and human.\n"
-    "3) A short micro-story inspired by the image (2–3 sentences). It should feel imaginative and narrative.\n\n"
-
-    "Rules:\n"
-    "- Do NOT add labels like 'Hook:', 'Description:', or 'Story:'. Just write each part as a continuous paragraph.\n"
-    #"- Do NOT use hashtags.\n"
-    "- Do NOT break the structure.\n"
-    "- Keep the tone cinematic, smooth, and natural.\n"
-    "- Output must be a single caption containing all three parts.\n"
-    "- The three hashtags should be relevant to the image and potentially engaging for Twitter."
-    "- Add three hashtags relevant to Ai. example: #Aiart #Ai etc. " 
-)
-
-                response = GEMINI_CLIENT.models.generate_content(
-                    model=model,
-                    contents=[
-                        types.Part.from_bytes(
-                            data=img_bytes,
-                            mime_type="image/jpeg",
-                        ),
-                        prompt,
-                    ],
-                )
-
-                caption = (response.text or "").strip()
-                if not caption:
-                    continue
-
-                # --- TEMİZLİK (Garanti olsun diye) ---
-                # Eğer model inatla başlık koyarsa diye manuel temizlik:
-                caption = caption.replace("**Twitter Caption:**", "").replace("Twitter Caption:", "")
-                caption = caption.replace("**Micro-story:**", "").replace("Micro-story:", "")
-                caption = caption.strip()
-
-                space_remaining = MAX_LEN - len(FOOTER)
-                if space_remaining <= 0:
-                    return static_caption()
-
-                caption = caption[:space_remaining]
-
-                final = (caption + FOOTER)[:MAX_LEN]
-
-                print("✨ Üretilen Caption:", final)
-                print(f"🧮 Karakter Sayısı: {len(final)}")
-                return final
-
-            except APIError as e:
-                error_msg = str(e)
-                if "429" in error_msg:
-                    print("🛑 429 Rate Limit aşıldı → Statik caption.")
-                    return static_caption()
-                elif "503" in error_msg or "UNAVAILABLE" in error_msg:
-                    print(f"⚠️ Model yoğun! {model} | Deneme {attempt}/3 → Bekleme: 15sn")
-                    time.sleep(15)
-                    continue
-                else:
-                    print(f"❌ Diğer API hatası ({model}): {error_msg}")
-                    break
-            except Exception as e:
-                print(f"⚠️ Beklenmeyen Hata ({model}): {e}")
-                break
-
-    print("❌ Tüm modeller hata verdi → Statik mod aktif.")
-    return static_caption()
-
-
 # ----------------------------------------------------
 # 6. ANA ÇALIŞTIRMA FONKSİYONU
 # ----------------------------------------------------
 def run_bot_task():
-
     print(f"\n🚀 BOT ÇALIŞTI — {time.strftime('%H:%M:%S')}")
-
-    tiny_img_path = TEMP_GEMINI_IMAGE
-    original_img_path = TEMP_TWITTER_IMAGE
 
     client, api_v1 = get_twitter_client()
     if not client or not api_v1:
-        print("❌ Twitter bağlantısı kurulamadı. Görev iptal.")
         return
 
     shared = get_shared_ids()
     photo = fetch_unique_photo_data(shared)
 
     if not photo:
-        print("❌ Benzersiz fotoğraf bulunamadı. Görev iptal.")
         return
 
     try:
-        # Fotoğrafları indir
-        tiny = download_image(photo["url_tiny"], tiny_img_path)
-        original = download_image(photo["url_original"], original_img_path)
+        tiny = download_image(photo["url_tiny"], TEMP_GEMINI_IMAGE)
+        original = download_image(photo["url_original"], TEMP_TWITTER_IMAGE)
 
         if not tiny or not original:
-            print("❌ Resim indirme başarısız. Görev iptal.")
             return
 
-        # Caption üret
         caption = generate_ai_caption(photo, tiny)
 
-        # Medya yükle (v1) ve Tweet at (v2)
         print("🔗 Medya yükleniyor...")
         media = api_v1.media_upload(filename=original)
 
         print("🐦 Tweet atılıyor...")
         tw = client.create_tweet(text=caption, media_ids=[media.media_id_string])
 
-        # Başarılı olursa ID'yi kaydet
         add_id_to_tracker(photo["id"])
-
         print(f"🎉 Tweet atıldı! ID: {tw.data['id']}")
 
     except Exception as e:
-        print(f"❌ Genel İşlem Hatası (Tweet/Medya): {e}")
+        print(f"❌ İşlem Hatası: {e}")
 
     finally:
-        # Geçici dosyaları sil
-        if os.path.exists(tiny_img_path):
-            os.remove(tiny_img_path)
-        if os.path.exists(original_img_path):
-            os.remove(original_img_path)
-        print("🧹 Geçici dosyalar temizlendi.")
-
+        # Dosyaların kilitlenmemesi için with bloğu kullandık, şimdi silebiliriz
+        for f in [TEMP_GEMINI_IMAGE, TEMP_TWITTER_IMAGE]:
+            if os.path.exists(f):
+                os.remove(f)
+        print("🧹 Temizlik yapıldı.")
 
 # ----------------------------------------------------
-# 7. ZAMANLAYICI / ÇALIŞTIRMA MODLARI
+# 7. ZAMANLAYICI
 # ----------------------------------------------------
 if __name__ == "__main__":
-    # Eğer komut satırında 'once' parametresi varsa (GitHub Actions modu):
-    #   python main.py once
-    # → Sadece bir kere çalışır ve çıkar.
     if len(sys.argv) > 1 and sys.argv[1].lower() == "once":
-        print("\n⚙️ Tek seferlik çalışma modu (GitHub / cron vb.)\n")
         run_bot_task()
     else:
-        # Lokal kullanım: PC'de sürekli çalışan bot
         run_bot_task()
         schedule.every(90).minutes.do(run_bot_task)
-        print("\n🟢 BOT AKTİF — Otomatik paylaşıma hazır. (1.5 saat aralıklarla)\n")
-
+        print("\n🟢 BOT AKTİF (90 dakikada bir çalışacak)\n")
         while True:
             schedule.run_pending()
             time.sleep(1)
-
-
-
-
-
-
-
-
-
